@@ -17,24 +17,15 @@ def load_model():
 
 model = load_model()
 
-# Define the path for storing patient data
-PATIENT_DATA_FILE = 'patient_data.csv'
+# Define the path for storing patient data (not directly used for st.session_state persistence across sessions)
+# PATIENT_DATA_FILE = 'patient_data.csv'
 
-# Load or initialize patient data
-@st.cache_data
-def load_patient_data():
-    if os.path.exists(PATIENT_DATA_FILE):
-        return pd.read_csv(PATIENT_DATA_FILE)
-    else:
-        return pd.DataFrame(columns=['Age', 'Fasting Glucose', 'Fasting Insulin ', 'Fasting C-Peptide',
-                                     'Fasting Leptin', 'Fasting TG', 'Fasting Cho', 'HDL -C', 'LDL-C',
-                                     'VLDL', 'GDM Prediction'])
-
-patient_df = load_patient_data()
-
-# Function to save patient data
-def save_patient_data(df_to_save):
-    df_to_save.to_csv(PATIENT_DATA_FILE, index=False)
+# Initialize patient data in session state if it doesn't exist
+if 'patient_df' not in st.session_state:
+    # In a real app, you might load initial data from a persistent store here
+    st.session_state.patient_df = pd.DataFrame(columns=['Age', 'Fasting Glucose', 'Fasting Insulin ', 'Fasting C-Peptide',
+                                                         'Fasting Leptin', 'Fasting TG', 'Fasting Cho', 'HDL -C', 'LDL-C',
+                                                         'VLDL', 'GDM Prediction'])
 
 # Web Application Interface
 st.title("Gestational Diabetes Mellitus (GDM) Prediction")
@@ -58,8 +49,6 @@ st.write(entered_values_df)
 
 if st.sidebar.button("Predict GDM"):
     if model is not None:
-        global patient_df # Moved global declaration to the top of the block
-
         # Prepare data for prediction
         input_df = pd.DataFrame([input_data])
 
@@ -85,26 +74,26 @@ if st.sidebar.button("Predict GDM"):
             st.write(f"Confidence (Probability of Not GDM): {1 - prediction_proba[0]:.2f}")
             prediction_result = "No GDM"
 
-        # Store the result
+        # Store the result in session state
         new_patient_data = input_data.copy()
         new_patient_data['GDM Prediction'] = prediction_result
-        patient_df = pd.concat([patient_df, pd.DataFrame([new_patient_data])], ignore_index=True)
-        save_patient_data(patient_df)
-        st.success("Patient data and prediction saved.")
+        st.session_state.patient_df = pd.concat([st.session_state.patient_df, pd.DataFrame([new_patient_data])], ignore_index=True)
+        st.success("Patient data and prediction added to results.")
     else:
         st.warning("Model not loaded. Cannot make prediction.")
 
 
 st.subheader("Previous Patient Results:")
-if not patient_df.empty:
-    st.dataframe(patient_df)
+# Access patient_df from session state
+if not st.session_state.patient_df.empty:
+    st.dataframe(st.session_state.patient_df)
 
     # Download option
     @st.cache_data
     def convert_df_to_csv(df):
         return df.to_csv(index=False).encode('utf-8')
 
-    csv = convert_df_to_csv(patient_df)
+    csv = convert_df_to_csv(st.session_state.patient_df)
     st.download_button(
         label="Download Previous Results as CSV",
         data=csv,
