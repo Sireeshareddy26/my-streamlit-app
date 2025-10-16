@@ -58,6 +58,8 @@ st.write(entered_values_df)
 
 if st.sidebar.button("Predict GDM"):
     if model is not None:
+        global patient_df # Moved global declaration to the top of the block
+
         # Prepare data for prediction
         input_df = pd.DataFrame([input_data])
 
@@ -86,7 +88,6 @@ if st.sidebar.button("Predict GDM"):
         # Store the result
         new_patient_data = input_data.copy()
         new_patient_data['GDM Prediction'] = prediction_result
-        global patient_df # Declare patient_df as global to modify it
         patient_df = pd.concat([patient_df, pd.DataFrame([new_patient_data])], ignore_index=True)
         save_patient_data(patient_df)
         st.success("Patient data and prediction saved.")
